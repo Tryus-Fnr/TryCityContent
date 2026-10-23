@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "trycity-test",
+	"version": "1.0.0",
+	"name": "TryCity Content Selbsttest",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"de.leon.trycity.test.IrisOutlineTest"
+		]
+	},
+	"depends": {
+		"trycity": "*"
+	}
+}

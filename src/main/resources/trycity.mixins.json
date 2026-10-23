@@ -1,0 +1,26 @@
+{
+  "required": true,
+  "package": "de.leon.trycity.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "AbstractClientPlayerMixin",
+    "BlazeInvoker",
+    "CameraMixin",
+    "EnderManAccessor",
+    "EntityInvoker",
+    "EntityMixin",
+    "InventoryScreenMixin",
+    "ItemInHandRendererMixin",
+    "LevelRendererMixin",
+    "LivingEntityAccessor",
+    "LivingEntityMixin",
+    "ModelPartAccessor",
+    "PackPostAfterIrisMixin",
+    "PlayerMixin",
+    "SpellcasterIllagerAccessor",
+    "WalkAnimationStateAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

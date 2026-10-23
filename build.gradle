@@ -1,0 +1,110 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = project.version
+group = project.group
+
+base {
+	archivesName = "trycity-content"
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Nur zum Testen mit Shaderpack: ./gradlew runClient -PwithIris
+	// (Sodium + Iris aus dem NoRisk-Cache, kommen nicht in die Mod).
+	if (project.hasProperty("withIris")) {
+		def cache = "C:/Users/leonm/AppData/Roaming/norisk/NoRiskClientV3/meta/mod_cache"
+		runtimeOnly files("${cache}/sodium-fabric-0.9.1+mc26.1.2.jar", "${cache}/iris-fabric-1.11.3+mc26.1.2.jar")
+	}
+}
+
+// Selbsttest mit Iris-Shaderpack – gibt es nur mit -PwithIris, ein normaler Build
+// startet nie einen Client:   ./gradlew runClientGameTest -PwithIris
+// Legt eine Welt an, schaltet das Tryus-Pack ein, stellt Claim-Marker und ein
+// leuchtendes Schwein hin und macht Bilder ohne und mit Shaderpack
+// (build/run/clientGameTest/screenshots).
+if (project.hasProperty("withIris")) {
+	fabricApi {
+		configureTests {
+			createSourceSet = true
+			modId = "trycity-test"
+			enableGameTests = false
+			enableClientGameTests = true
+			eula = true
+			clearRunDirectory = false
+		}
+	}
+
+	def testRun = file("build/run/clientGameTest")
+	tasks.register("prepareIrisTest") {
+		doLast {
+			// Kopie, kein Link: ein Aufräumen des Testordners darf nie das echte Pack treffen.
+			project.sync {
+				from "C:/Users/leonm/AppData/Roaming/.minecraft/resourcepacks/Tryus"
+				into new File(testRun, "resourcepacks/Tryus")
+				exclude ".git/**", "tools/**"
+			}
+			project.copy {
+				from "C:/Users/leonm/AppData/Roaming/.minecraft/shaderpacks/ComplementaryReimagined_r5.4.zip"
+				into new File(testRun, "shaderpacks")
+			}
+			def iris = new File(testRun, "config/iris.properties")
+			iris.parentFile.mkdirs()
+			iris.text = "shaderPack=ComplementaryReimagined_r5.4.zip\nenableShaders=false\n"
+		}
+	}
+	tasks.matching { it.name == "runClientGameTest" }.configureEach { dependsOn "prepareIrisTest" }
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+// Nach jedem Build direkt in den NoRisk-Client (Profil „new“, 26.1.2). Ältere
+// trycity-content-*.jar fliegen vorher raus, sonst lägen zwei Stände nebeneinander.
+// Läuft Minecraft noch, sperrt Windows die alte Datei – dann bricht der Build nicht
+// ab, sondern sagt Bescheid: Spiel zu, nochmal bauen.
+def noriskMods = file("C:/Users/leonm/AppData/Roaming/norisk/NoRiskClientV3/data/profiles/noriskclient/new/mods")
+
+tasks.register("installNoRisk") {
+	group = "build"
+	description = "Kopiert die fertige Mod in den NoRisk-Mods-Ordner"
+	dependsOn tasks.named("jar")
+	doLast {
+		def jarFile = tasks.named("jar").get().archiveFile.get().asFile
+		try {
+			project.delete(fileTree(noriskMods) { include "trycity-content-*.jar" })
+			project.copy {
+				from jarFile
+				into noriskMods
+			}
+			logger.lifecycle("TryCity Content -> NoRisk: ${jarFile.name}")
+		} catch (Exception e) {
+			logger.warn("NoRisk-Mods-Ordner gesperrt – laeuft Minecraft noch? Spiel schliessen und nochmal bauen. " +
+					"Die neue Mod liegt in ${jarFile}")
+		}
+	}
+}
+
+tasks.named("build") {
+	finalizedBy("installNoRisk")
+}
