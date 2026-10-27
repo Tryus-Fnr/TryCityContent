@@ -11,7 +11,7 @@ JAVA_HOME="C:/Program Files/Amazon Corretto/jdk25.0.4_7" ./gradlew build --offli
 
 Ergebnis: `build/libs/trycity-content-1.0.0.jar`. `build` kopiert es danach automatisch
 (Aufgabe `installNoRisk`) nach
-`C:\Users\leonm\AppData\Roaming\norisk\NoRiskClientV3\data\profiles\noriskclient\new\mods` –
+`%APPDATA%\norisk\NoRiskClientV3\data\profiles\noriskclient\new\mods` –
 ältere `trycity-content-*.jar` dort werden vorher gelöscht. Fabric API muss im Profil sein.
 
 ## Was drin ist

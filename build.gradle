@@ -5,6 +5,9 @@ plugins {
 version = project.version
 group = project.group
 
+// NoRisk und .minecraft liegen unter %APPDATA% – kein fest verdrahteter Benutzerordner.
+def appData = System.getenv("APPDATA")
+
 base {
 	archivesName = "trycity-content"
 }
@@ -17,7 +20,7 @@ dependencies {
 	// Nur zum Testen mit Shaderpack: ./gradlew runClient -PwithIris
 	// (Sodium + Iris aus dem NoRisk-Cache, kommen nicht in die Mod).
 	if (project.hasProperty("withIris")) {
-		def cache = "C:/Users/leonm/AppData/Roaming/norisk/NoRiskClientV3/meta/mod_cache"
+		def cache = "${appData}/norisk/NoRiskClientV3/meta/mod_cache"
 		runtimeOnly files("${cache}/sodium-fabric-0.9.1+mc26.1.2.jar", "${cache}/iris-fabric-1.11.3+mc26.1.2.jar")
 	}
 }
@@ -44,12 +47,12 @@ if (project.hasProperty("withIris")) {
 		doLast {
 			// Kopie, kein Link: ein Aufräumen des Testordners darf nie das echte Pack treffen.
 			project.sync {
-				from "C:/Users/leonm/AppData/Roaming/.minecraft/resourcepacks/Tryus"
+				from "${appData}/.minecraft/resourcepacks/Tryus"
 				into new File(testRun, "resourcepacks/Tryus")
 				exclude ".git/**", "tools/**"
 			}
 			project.copy {
-				from "C:/Users/leonm/AppData/Roaming/.minecraft/shaderpacks/ComplementaryReimagined_r5.4.zip"
+				from "${appData}/.minecraft/shaderpacks/ComplementaryReimagined_r5.4.zip"
 				into new File(testRun, "shaderpacks")
 			}
 			def iris = new File(testRun, "config/iris.properties")
@@ -83,7 +86,7 @@ java {
 // trycity-content-*.jar fliegen vorher raus, sonst lägen zwei Stände nebeneinander.
 // Läuft Minecraft noch, sperrt Windows die alte Datei – dann bricht der Build nicht
 // ab, sondern sagt Bescheid: Spiel zu, nochmal bauen.
-def noriskMods = file("C:/Users/leonm/AppData/Roaming/norisk/NoRiskClientV3/data/profiles/noriskclient/new/mods")
+def noriskMods = file("${appData}/norisk/NoRiskClientV3/data/profiles/noriskclient/new/mods")
 
 tasks.register("installNoRisk") {
 	group = "build"
