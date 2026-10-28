@@ -39,9 +39,7 @@ public class IrisOutlineTest implements FabricClientGameTest {
             PackRepository packs = client.getResourcePackRepository();
             packs.reload();
             List<String> selected = new ArrayList<>(packs.getSelectedIds());
-            // 26.3 versteht das #moj_import der Pack-Shader (Text, Claim-Grenze) nicht – das Pack
-            // lässt sich dort nicht laden. Dann nur Mod-Teile: Outline nach Iris am leuchtenden Schwein, Morph.
-            //? if <26.3
+            // Ab 26.3 kommen die Pack-Shader aus dem Overlay 26_3 (tools/make_shaders_26_3.py im Pack)
             if (!selected.contains("file/Tryus")) selected.add("file/Tryus");
             packs.setSelected(selected);
         });
@@ -68,6 +66,10 @@ public class IrisOutlineTest implements FabricClientGameTest {
             world.getServer().runCommand(marker("frame", 1));
             world.getServer().runCommand(marker("wall_00", word));
             world.getServer().runCommand("summon pig ~5 ~ ~2 {Glowing:1b,NoAI:1b}");
+            // Welt-Text läuft über den Text-Shader des Packs (fehlt er, ist das ganze Pack weg)
+            world.getServer().runCommand("summon text_display ~4 ~1.6 ~-1.5 {text:\"TryCity Text\",billboard:\"center\"}");
+            // Text-Effekt aus dem Pack (Farbe #F8F85C = Regenbogen, include/_config.glsl)
+            world.getServer().runCommand("summon text_display ~4 ~1.3 ~-1.5 {text:{text:\"Regenbogen\",color:\"#F8F85C\"},billboard:\"center\"}");
             context.runOnClient(client -> hideGui(client, true));
             context.waitTicks(40);
             shot(context, "1_ohne_shader");
