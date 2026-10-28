@@ -5,6 +5,7 @@ import de.leon.trycity.net.TryCityChannel;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.event.client.player.ClientPreAttackCallback;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionResult;
@@ -30,6 +31,8 @@ public final class MorphModule implements ContentModule {
     public void init() {
         // Eigene Aussehen des Servers (Choice.custom) – neue hier eintragen
         MorphLooks.register(GhostLook.ID, new GhostLook());
+        MorphLooks.register(RigLook.TRIPPELT, new RigLook("trippelt"));
+        MorphLooks.register(RigLook.SKIBIDI, new RigLook("skibidi"));
 
         TryCityChannel.listen("morph", MorphClient::apply);
         TryCityChannel.listen("morph_event", MorphClient::event);
@@ -38,6 +41,11 @@ public final class MorphModule implements ContentModule {
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
             if (level.isClientSide() && player == Minecraft.getInstance().player) MorphPoses.melee();
             return InteractionResult.PASS;
+        });
+        // Jeder Druck auf die Angriffstaste (auch ins Leere, gehalten beim Abbauen) – wie der Server Schwünge zählt
+        ClientPreAttackCallback.EVENT.register((client, player, clickCount) -> {
+            MorphClient.attack();
+            return false;
         });
         ClientEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (entity instanceof Projectile projectile && MorphClient.active()

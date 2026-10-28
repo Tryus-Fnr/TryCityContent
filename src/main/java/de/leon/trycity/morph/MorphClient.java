@@ -118,6 +118,22 @@ public final class MorphClient {
         return figure;
     }
 
+    /**
+     * Die Teile einer Verwandlung aus Teilen ({@link RigLook}) für dieses Bild – nur für die
+     * eigene Figur, sonst null. Aus {@code ArmorStandRendererMixin} beim Vorbereiten des
+     * Zeichenstands (Welt und Inventar).
+     */
+    public static @Nullable RigParts rigParts(Entity entity, float partialTick) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (state == null || player == null || entity != figur || !(look() instanceof RigLook rig)) return null;
+        return rig.parts(player, entity, partialTick);
+    }
+
+    /** Die Angriffstaste (ClientPreAttackCallback) – für Aussehen mit eigenem Schlag. */
+    static void attack() {
+        if (state != null) look().attack();
+    }
+
     /** Die Figur, wie sie für die Hand in der Ego-Sicht gebraucht wird – null ohne Morph. */
     static @Nullable Entity figureForHand() {
         LocalPlayer player = Minecraft.getInstance().player;
@@ -270,6 +286,7 @@ public final class MorphClient {
         if (state == null || !json.has("event")) return;
         if ("special".equals(json.get("event").getAsString()) && json.has("ms")) {
             MorphPoses.special(json.get("ms").getAsLong());
+            look().special(json.get("ms").getAsLong());
         }
     }
 
@@ -288,6 +305,7 @@ public final class MorphClient {
         if (figure == null) return;
         sync(player, figure);
         MorphPoses.tick(player, figure);
+        look().tick(player);
         boolean sichtbar = !mc.options.getCameraType().isFirstPerson() || Mc.screen() instanceof AbstractContainerScreen<?>;
         if (!sichtbar || Objects.equals(tickKaputt, state)) return;
         try {
@@ -412,6 +430,7 @@ public final class MorphClient {
      */
     public static EntityDimensions dimensions(EntityDimensions server, Pose pose) {
         if (pose != Pose.STANDING && pose != Pose.CROUCHING) return server;
+        if (state != null && look().keepsPlayerSize()) return server;
         Entity figure = figure();
         if (figure == null) return server;
         EntityDimensions mob = figure.getDimensions(Pose.STANDING);

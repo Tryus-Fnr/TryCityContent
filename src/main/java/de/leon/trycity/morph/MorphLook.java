@@ -45,4 +45,22 @@ public interface MorphLook {
     default boolean mobArm() {
         return true;
     }
+
+    /** Einmal je Client-Tick, auch in der Ego-Sicht – für eigene Animationen ({@link RigLook}). */
+    default void tick(LocalPlayer player) {}
+
+    /** Der Spieler schlägt zu (Angriffstaste, auch ins Leere und beim Abbauen). */
+    default void attack() {}
+
+    /** Spezial vom Server (Schleichen + F), {@code millis} lang. */
+    default void special(long millis) {}
+
+    /**
+     * Bleiben Hitbox und Augen die des Spielers? Für Aussehen, die der Server nicht
+     * verkleinert und deren Modell auf Spieler-Augenhöhe gebaut ist ({@link RigLook}) –
+     * sonst nähme {@link MorphClient#dimensions} die Maße der Figur.
+     */
+    default boolean keepsPlayerSize() {
+        return false;
+    }
 }

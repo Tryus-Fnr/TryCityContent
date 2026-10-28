@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import de.leon.trycity.compat.Mc;
+import de.leon.trycity.morph.RigSummon;
 import de.leon.trycity.net.TryCityChannel;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
@@ -28,8 +29,9 @@ import java.util.concurrent.CompletableFuture;
  * {@code ClaimBorderShader}) und ein leuchtendes Schwein. Bilder ohne und mit
  * Shaderpack nach {@code versions/<v>/build/run/clientGameTest/screenshots}.</p>
  *
- * <p>Danach der Morph: Zombie in F5, als Hand in der Ego-Sicht, im Inventar, und der
- * Geist – das Paket kommt wie vom Server über den Kanal {@code trycity:morph}.</p>
+ * <p>Danach der Morph: Zombie in F5, als Hand in der Ego-Sicht, im Inventar, der Geist
+ * und TrippelT (eigene Figur, Schlag, Inventar – daneben zweimal die Zuschauer-Ansicht
+ * vom Server) – das Paket kommt wie vom Server über den Kanal {@code trycity:morph}.</p>
  */
 public class IrisOutlineTest implements FabricClientGameTest {
 
@@ -117,7 +119,48 @@ public class IrisOutlineTest implements FabricClientGameTest {
             });
             context.waitTicks(20);
             shot(context, "9_morph_geist_f5");
+
+            // TrippelT: die eigene Figur (Mod, Bild für Bild aus den Keyframes) und daneben zweimal,
+            // wie ein Zuschauer ihn vom Server bekommt – Ständer + mitfahrende Teile (RigSummon)
+            morph(world, "{\"v\":1,\"active\":true,\"entity\":\"minecraft:armor_stand\",\"custom\":\"tryus:trippelt\"}");
+            try {
+                world.getServer().runCommand("execute at @p run " + RigSummon.command("trippelt", "idle", 0.0, -90f, "~ ~ ~2.2"));
+                world.getServer().runCommand("execute at @p run " + RigSummon.command("trippelt", "walk", 0.0, -90f, "~ ~ ~-2.2"));
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException(e);
+            }
+            context.waitTicks(30);
+            shot(context, "10_morph_trippelt_f5");
+            // Schleichen + F vom Server: der Schlag – Bild kurz vor dem Höhepunkt (0,46 s)
+            event(world, "{\"v\":1,\"event\":\"special\",\"ms\":750}");
+            context.waitTicks(8);
+            shot(context, "11_morph_trippelt_schlag");
+            context.waitTicks(30);
+            context.setScreen(() -> new InventoryScreen(Minecraft.getInstance().player));
+            context.waitTicks(20);
+            shot(context, "12_morph_trippelt_inventar");
+            context.setScreen(() -> null);
+
+            // Skibidi genauso: eigene Figur, daneben Stand (singt) und Hüpfer vom Server
+            world.getServer().runCommand("kill @e[type=!player]");
+            morph(world, "{\"v\":1,\"active\":true,\"entity\":\"minecraft:armor_stand\",\"custom\":\"tryus:skibidi\"}");
+            try {
+                world.getServer().runCommand("execute at @p run " + RigSummon.command("skibidi", "idle", 0.3, -90f, "~ ~ ~2.4"));
+                world.getServer().runCommand("execute at @p run " + RigSummon.command("skibidi", "walk", 0.15, -90f, "~ ~ ~-2.4"));
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException(e);
+            }
+            context.waitTicks(30);
+            shot(context, "13_morph_skibidi_f5");
+            event(world, "{\"v\":1,\"event\":\"special\",\"ms\":750}");
+            context.waitTicks(6);
+            shot(context, "14_morph_skibidi_schlag");
         }
+    }
+
+    /** Ereignis wie vom Server ({@code MorphManager.sendModEvent}) im Kanal trycity:morph_event. */
+    private static void event(TestSingleplayerContext world, String json) {
+        send(world, "morph_event", json);
     }
 
     /** HUD/Hand aus (F1) – ab 26.2 hängt das am Hud und lässt sich nur umschalten. */
@@ -130,10 +173,14 @@ public class IrisOutlineTest implements FabricClientGameTest {
 
     /** Wie der Server ({@code TryCityModChannel.send}): JSON im Kanal trycity:morph an den Spieler. */
     private static void morph(TestSingleplayerContext world, String json) {
+        send(world, "morph", json);
+    }
+
+    private static void send(TestSingleplayerContext world, String channel, String json) {
         world.getServer().runOnServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
             CustomPacketPayload.Type<TryCityChannel.Nachricht> type =
-                    new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("trycity", "morph"));
+                    new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("trycity", channel));
             ServerPlayNetworking.send(player, new TryCityChannel.Nachricht(type, json));
         });
     }
