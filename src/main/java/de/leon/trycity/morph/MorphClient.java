@@ -2,8 +2,13 @@ package de.leon.trycity.morph;
 
 import com.google.gson.JsonObject;
 import de.leon.trycity.TryCityClient;
+import de.leon.trycity.compat.Mc;
 import de.leon.trycity.mixin.EntityInvoker;
 import de.leon.trycity.mixin.WalkAnimationStateAccessor;
+//? if >=26.3 {
+/*import de.leon.trycity.mixin.LivingEntityAccessor;
+import de.leon.trycity.mixin.SwingStateAccessor;
+*///?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -12,6 +17,7 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -133,11 +139,20 @@ public final class MorphClient {
             figur = null;
             TryCityClient.LOG.warn("[TryCity] Morph-Figur {} nicht gebaut: {}", state, e.toString());
         }
-        if (figur == null) kaputt = state;
-        // Nie schieben: im Tick drückt ein Mob Spieler weg, die in ihm stehen – also einen selbst
-        else figur.noPhysics = true;
+        if (figur == null) {
+            kaputt = state;
+        } else {
+            // Nie schieben: im Tick drückt ein Mob Spieler weg, die in ihm stehen – also einen selbst
+            figur.noPhysics = true;
+            // Ab 26.2 bekommt ein Wesen seine ID erst beim Eintragen in die Welt, und das
+            // Zeichnen fragt sie ab („before ID assignment“). Negativ: kommt vom Server nie vor.
+            figur.setId(FIGUR_ID);
+        }
         return figur;
     }
+
+    /** Entity-ID der Figur – negativ, damit sie nie mit einer echten aus der Welt zusammenfällt. */
+    private static final int FIGUR_ID = -1_700_000;
 
     /** Alles, was man beim Zeichnen sieht, vom Spieler auf die Figur. */
     private static void sync(LocalPlayer player, Entity figure) {
@@ -164,11 +179,7 @@ public final class MorphClient {
             mob.yBodyRotO = player.yBodyRotO;
             mob.yHeadRot = player.yHeadRot;
             mob.yHeadRotO = player.yHeadRotO;
-            mob.attackAnim = player.attackAnim;
-            mob.oAttackAnim = player.oAttackAnim;
-            mob.swinging = player.swinging;
-            mob.swingingArm = player.swingingArm;
-            mob.swingTime = player.swingTime;
+            copySwing(player, mob);
             mob.hurtTime = player.hurtTime;
             mob.hurtDuration = player.hurtDuration;
             mob.deathTime = player.deathTime;
@@ -182,6 +193,32 @@ public final class MorphClient {
         }
         name(player, figure);
         look.sync(player, figure);
+    }
+
+    /** Schlag-Animation 1:1 – bis 26.2 Felder am LivingEntity, ab 26.3 im {@code SwingState}. */
+    private static void copySwing(LivingEntity from, LivingEntity to) {
+        //? if <26.3 {
+        to.attackAnim = from.attackAnim;
+        to.oAttackAnim = from.oAttackAnim;
+        to.swinging = from.swinging;
+        to.swingingArm = from.swingingArm;
+        to.swingTime = from.swingTime;
+        //?} else {
+        /*SwingStateAccessor quelle = (SwingStateAccessor) ((LivingEntityAccessor) from).trycity$swingState();
+        SwingStateAccessor ziel = (SwingStateAccessor) ((LivingEntityAccessor) to).trycity$swingState();
+        ziel.trycity$setCurrentSwing(quelle.trycity$currentSwing());
+        ziel.trycity$setTicks(quelle.trycity$ticks());
+        ziel.trycity$setOldAnimation(quelle.trycity$oldAnimation());
+        ziel.trycity$setAnimation(quelle.trycity$animation());
+        *///?}
+    }
+
+    /** Mit welcher Hand der Spieler gerade zuschlägt – null, wenn er nicht schlägt. */
+    static @Nullable InteractionHand swingingHand(LivingEntity player) {
+        //? if <26.3 {
+        return player.swinging ? player.swingingArm : null;
+        //?} else
+        /*return player.isSwinging() ? player.getCurrentSwing().hand() : null;*/
     }
 
     private static void copyWalk(WalkAnimationState from, WalkAnimationState to) {
@@ -251,7 +288,7 @@ public final class MorphClient {
         if (figure == null) return;
         sync(player, figure);
         MorphPoses.tick(player, figure);
-        boolean sichtbar = !mc.options.getCameraType().isFirstPerson() || mc.screen instanceof AbstractContainerScreen<?>;
+        boolean sichtbar = !mc.options.getCameraType().isFirstPerson() || Mc.screen() instanceof AbstractContainerScreen<?>;
         if (!sichtbar || Objects.equals(tickKaputt, state)) return;
         try {
             figure.tick();

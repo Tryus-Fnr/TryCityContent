@@ -7,8 +7,11 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+//? if <26.2 {
+import net.minecraft.world.entity.EntityType;
+//?} else
+/*import net.minecraft.world.entity.EntityTypes;*/
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -32,7 +35,10 @@ final class GhostLook implements MorphLook {
 
     @Override
     public Entity create(ClientLevel level, MorphState state) {
+        //? if <26.2 {
         ArmorStand stand = EntityType.ARMOR_STAND.create(level, EntitySpawnReason.LOAD);
+        //?} else
+        /*ArmorStand stand = EntityTypes.ARMOR_STAND.create(level, EntitySpawnReason.LOAD);*/
         if (stand == null) return null;
         stand.setInvisible(true);
         stand.setNoBasePlate(true);
@@ -48,8 +54,9 @@ final class GhostLook implements MorphLook {
     @Override
     public void sync(LocalPlayer player, Entity figure) {
         if (!(figure instanceof ArmorStand stand)) return;
-        boolean haupt = player.swinging && player.swingingArm == InteractionHand.MAIN_HAND;
-        boolean neben = player.swinging && player.swingingArm == InteractionHand.OFF_HAND;
+        InteractionHand schlag = MorphClient.swingingHand(player);
+        boolean haupt = schlag == InteractionHand.MAIN_HAND;
+        boolean neben = schlag == InteractionHand.OFF_HAND;
         stand.setRightArmPose(new Rotations(haupt ? ARM_VORN - SCHLAG : ARM_VORN, 0, 0));
         stand.setLeftArmPose(new Rotations(neben ? ARM_VORN - SCHLAG : ARM_VORN, 0, 0));
     }

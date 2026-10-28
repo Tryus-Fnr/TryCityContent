@@ -1,8 +1,8 @@
 {
 	"schemaVersion": 1,
-	"id": "trycity",
+	"id": "trycity_core",
 	"version": "${version}",
-	"name": "TryCity Content",
+	"name": "TryCity Content (Minecraft ${minecraft})",
 	"description": "Extras für TryCity: Inhalte, die der Server dem Client per Paket ankündigt – z. B. sich selbst als Morph-Mob sehen.",
 	"authors": [
 		"leonm"
@@ -19,7 +19,7 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.18.4",
-		"minecraft": "~26.1",
+		"minecraft": "${minecraft}",
 		"java": ">=25",
 		"fabric-api": "*"
 	}

@@ -1,6 +1,8 @@
 package de.leon.trycity.morph;
 
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -20,7 +22,8 @@ public final class MorphLooks {
 
     /** Ein normales Mob – aus dem Typ gebaut. */
     public static final MorphLook STANDARD = (level, state) -> {
-        EntityType<?> type = EntityType.byString(state.entity()).orElse(null);
+        // Wie das frühere EntityType.byString (ab 26.2 weg)
+        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getOptional(Identifier.tryParse(state.entity())).orElse(null);
         if (type == null) return null;
         Entity entity = type.create(level, EntitySpawnReason.LOAD);
         if (entity instanceof Mob mob && state.baby()) mob.setBaby(true);

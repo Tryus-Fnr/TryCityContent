@@ -26,4 +26,10 @@ public interface LivingEntityAccessor {
     /** 1 = benutzt, 2 = mit der Nebenhand */
     @Invoker("setLivingEntityFlag")
     void trycity$setLivingEntityFlag(int flag, boolean value);
+
+    // Ab 26.3: Schlag-Animation als eigenes Objekt ({@link SwingStateAccessor})
+    //? if >=26.3 {
+    /*@Accessor("swingState")
+    LivingEntity.SwingState trycity$swingState();
+    *///?}
 }

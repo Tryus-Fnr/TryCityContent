@@ -3,9 +3,17 @@ package de.leon.trycity.test;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import de.leon.trycity.compat.Mc;
+import de.leon.trycity.net.TryCityChannel;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.repository.PackRepository;
 
 import java.util.ArrayList;
@@ -18,7 +26,10 @@ import java.util.concurrent.CompletableFuture;
  * <p>Welt anlegen, Tryus-Pack ein, Kamera nach Osten, davor eine Claim-Wand wie vom
  * Server (Kamera-Marker + ein Wand-Marker, gleiche Modelle und Glow-Farben wie
  * {@code ClaimBorderShader}) und ein leuchtendes Schwein. Bilder ohne und mit
- * Shaderpack nach {@code build/run/clientGameTest/screenshots}.</p>
+ * Shaderpack nach {@code versions/<v>/build/run/clientGameTest/screenshots}.</p>
+ *
+ * <p>Danach der Morph: Zombie in F5, als Hand in der Ego-Sicht, im Inventar, und der
+ * Geist – das Paket kommt wie vom Server über den Kanal {@code trycity:morph}.</p>
  */
 public class IrisOutlineTest implements FabricClientGameTest {
 
@@ -28,6 +39,9 @@ public class IrisOutlineTest implements FabricClientGameTest {
             PackRepository packs = client.getResourcePackRepository();
             packs.reload();
             List<String> selected = new ArrayList<>(packs.getSelectedIds());
+            // 26.3 versteht das #moj_import der Pack-Shader (Text, Claim-Grenze) nicht – das Pack
+            // lässt sich dort nicht laden. Dann nur Mod-Teile: Outline nach Iris am leuchtenden Schwein, Morph.
+            //? if <26.3
             if (!selected.contains("file/Tryus")) selected.add("file/Tryus");
             packs.setSelected(selected);
         });
@@ -35,7 +49,10 @@ public class IrisOutlineTest implements FabricClientGameTest {
         context.waitFor(client -> reload.isDone());
 
         try (TestSingleplayerContext world = context.worldBuilder().create()) {
+            //? if <26.2 {
             world.getClientLevel().waitForChunksRender();
+            //?} else
+            /*world.getConnection().waitForChunksRender();*/
             world.getServer().runCommand("time set noon");
             world.getServer().runCommand("weather clear");
             world.getServer().runCommand("tp @p ~ ~ ~ -90 8");
@@ -51,7 +68,7 @@ public class IrisOutlineTest implements FabricClientGameTest {
             world.getServer().runCommand(marker("frame", 1));
             world.getServer().runCommand(marker("wall_00", word));
             world.getServer().runCommand("summon pig ~5 ~ ~2 {Glowing:1b,NoAI:1b}");
-            context.runOnClient(client -> client.options.hideGui = true);
+            context.runOnClient(client -> hideGui(client, true));
             context.waitTicks(40);
             shot(context, "1_ohne_shader");
 
@@ -74,7 +91,49 @@ public class IrisOutlineTest implements FabricClientGameTest {
             context.runOnClient(client -> setShaders(false));
             context.waitTicks(40);
             shot(context, "5_im_sturm_ohne_shader");
+
+            // Morph über den echten Paket-Weg (trycity:morph) – Figur in F5, Mob-Hand, Inventar, Geist
+            world.getServer().runCommand("kill @e[type=!player]");
+            morph(world, "{\"v\":1,\"active\":true,\"entity\":\"minecraft:zombie\",\"name\":true}");
+            context.runOnClient(client -> client.options.setCameraType(CameraType.THIRD_PERSON_FRONT));
+            context.waitTicks(20);
+            shot(context, "6_morph_zombie_f5");
+            context.runOnClient(client -> {
+                client.options.setCameraType(CameraType.FIRST_PERSON);
+                hideGui(client, false);
+            });
+            context.waitTicks(20);
+            shot(context, "7_morph_zombie_hand");
+            context.setScreen(() -> new InventoryScreen(Minecraft.getInstance().player));
+            context.waitTicks(20);
+            shot(context, "8_morph_zombie_inventar");
+            context.setScreen(() -> null);
+            morph(world, "{\"v\":1,\"active\":true,\"entity\":\"minecraft:armor_stand\",\"custom\":\"tryus:geist\"}");
+            context.runOnClient(client -> {
+                client.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+                hideGui(client, true);
+            });
+            context.waitTicks(20);
+            shot(context, "9_morph_geist_f5");
         }
+    }
+
+    /** HUD/Hand aus (F1) – ab 26.2 hängt das am Hud und lässt sich nur umschalten. */
+    private static void hideGui(Minecraft client, boolean hide) {
+        //? if <26.2 {
+        client.options.hideGui = hide;
+        //?} else
+        /*if (client.gui.hud.isHidden() != hide) client.gui.hud.toggle();*/
+    }
+
+    /** Wie der Server ({@code TryCityModChannel.send}): JSON im Kanal trycity:morph an den Spieler. */
+    private static void morph(TestSingleplayerContext world, String json) {
+        world.getServer().runOnServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+            CustomPacketPayload.Type<TryCityChannel.Nachricht> type =
+                    new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("trycity", "morph"));
+            ServerPlayNetworking.send(player, new TryCityChannel.Nachricht(type, json));
+        });
     }
 
     /** Stehende Zone um (x, z) mit Radius r - Wörter wie StormZoneShader.update. */
@@ -96,7 +155,7 @@ public class IrisOutlineTest implements FabricClientGameTest {
      */
     private static void shot(ClientGameTestContext context, String name) {
         context.runOnClient(client -> Screenshot.grab(client.gameDirectory, name + ".png",
-                client.getMainRenderTarget(), 1, message -> {}));
+                Mc.mainTarget(), 1, message -> {}));
         context.waitTicks(10);
     }
 

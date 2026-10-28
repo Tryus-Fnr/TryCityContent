@@ -2,21 +2,17 @@ package de.leon.trycity.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import de.leon.trycity.TryCityClient;
+import de.leon.trycity.compat.Mc;
 import de.leon.trycity.shader.IrisCompat;
-import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LevelTargetBundle;
 import net.minecraft.client.renderer.PostChain;
-import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
-import org.joml.Matrix4fc;
-import org.joml.Vector4f;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -29,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p>Beides zeichnet das Resourcepack in der Outline-Kette
  * ({@code post_effect/entity_outline.json}): sie läuft im Bild-Ablauf von
- * {@code renderLevel} mit. Mit Shaderpack schreibt Iris danach – beim
+ * {@code renderLevel} (ab 26.2 {@code render}) mit. Mit Shaderpack schreibt Iris danach – beim
  * {@code popMatrix} am Ende von {@code renderLevel} – sein eigenes Bild über das
  * Hauptbild, und was die Kette hineingemalt hat, ist weg. Das normale Leuchten
  * überlebt nur, weil Vanilla es erst später ({@code doEntityOutline}) darüberlegt.</p>
@@ -48,6 +44,8 @@ abstract class PackPostAfterIrisMixin {
      * Der Outline-Puffer selbst. Nicht {@code entityOutlineTarget()}: das liefert den
      * Griff aus dem Bild-Ablauf, und den leert {@code targets.clear()} kurz vor dem Ende.
      */
+    //? if >=26.2
+    /*@Final*/
     @Shadow
     private RenderTarget entityOutlineTarget;
 
@@ -55,13 +53,22 @@ abstract class PackPostAfterIrisMixin {
     @Unique
     private PostChain trycity$afterIris;
 
-    @WrapOperation(method = "renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;ZLnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;)V",
+    /** Das Welt-Zeichnen: bis 26.1 {@code renderLevel}, ab 26.2 {@code render} mit anderen Parametern. */
+    //? if <26.2 {
+    private static final String RENDER = "renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;ZLnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;)V";
+    //?} elif <26.3 {
+    /*private static final String RENDER = "render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V";
+    *///?} else {
+    /*private static final String RENDER = "render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;ZZ)V";
+    *///?}
+
+    @WrapOperation(method = RENDER,
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/PostChain;addToFrame(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;IILnet/minecraft/client/renderer/PostChain$TargetBundle;)V",
                     ordinal = 0))
     private void trycity$outlineLater(PostChain chain, FrameGraphBuilder frame, int width, int height,
                                       PostChain.TargetBundle targets, Operation<Void> original) {
-        // ordinal 0 = die Outline-Kette (die Transparenz-Kette kommt danach).
+        // ordinal 0 = die Outline-Kette (bis 26.2 kommt die Transparenz-Kette danach, ab 26.3 gibt es sie nicht mehr).
         if (IrisCompat.shaderPackActive()) {
             trycity$afterIris = chain;
             return;
@@ -69,12 +76,8 @@ abstract class PackPostAfterIrisMixin {
         original.call(chain, frame, width, height, targets);
     }
 
-    @Inject(method = "renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;ZLnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;)V",
-            at = @At("RETURN"))
-    private void trycity$outlineAfterIris(GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderOutline,
-                                          CameraRenderState cameraState, Matrix4fc modelViewMatrix, GpuBufferSlice terrainFog,
-                                          Vector4f fogColor, boolean shouldRenderSky, ChunkSectionsToRender chunkSectionsToRender,
-                                          CallbackInfo ci) {
+    @Inject(method = RENDER, at = @At("RETURN"))
+    private void trycity$outlineAfterIris(CallbackInfo ci, @Local(argsOnly = true) GraphicsResourceAllocator allocator) {
         PostChain chain = trycity$afterIris;
         trycity$afterIris = null;
         if (chain == null) return;
@@ -82,7 +85,7 @@ abstract class PackPostAfterIrisMixin {
         if (outline == null) return;
         try {
             // Wie im Bild-Ablauf von renderLevel: Hauptbild und Outline-Puffer von außen.
-            RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+            RenderTarget main = Mc.mainTarget();
             FrameGraphBuilder frame = new FrameGraphBuilder();
             LevelTargetBundle targets = new LevelTargetBundle();
             targets.main = frame.importExternal("main", main);

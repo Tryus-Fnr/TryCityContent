@@ -1,18 +1,33 @@
 # TryCity Content
 
-Fabric-Mod (Minecraft 26.1.2, nur Client) mit Extras für TryCity. Der Server sagt der Mod
-per Paket, was sie zeigen soll – ohne Mod merkt niemand etwas.
+Fabric-Mod (nur Client) mit Extras für TryCity. Der Server sagt der Mod per Paket, was sie
+zeigen soll – ohne Mod merkt niemand etwas.
+
+**Eine Datei für Minecraft 26.1.2, 26.2 und 26.3.** Der Quelltext gilt für alle drei
+([Stonecutter](https://stonecutter.kikugie.dev)); was sich zwischen den Versionen
+unterscheidet, steht als `//? if <26.2 { … }` direkt im Code bzw. als Ersetzung in
+`stonecutter.gradle.kts`, Kleinkram in `compat/Mc`. Im Ordner steht der Code für 26.1.2
+(aktive Version). Jede Version wird einzeln gebaut, `bundleJar` packt die drei Jars als
+Jar-in-Jar in eine Datei (innere Mod-ID `trycity_core`), Fabric lädt die passende.
 
 ## Bauen
 
 ```bash
-JAVA_HOME="C:/Program Files/Amazon Corretto/jdk25.0.4_7" ./gradlew build --offline
+JAVA_HOME="C:/Program Files/Zulu/zulu-25" ./gradlew build
 ```
 
 Ergebnis: `build/libs/trycity-content-1.0.0.jar`. `build` kopiert es danach automatisch
 (Aufgabe `installNoRisk`) nach
 `%APPDATA%\norisk\NoRiskClientV3\data\profiles\noriskclient\new\mods` –
 ältere `trycity-content-*.jar` dort werden vorher gelöscht. Fabric API muss im Profil sein.
+Versionen (Mod, Fabric API je Minecraft-Version) stehen in `stonecutter.properties.toml`.
+
+**GitHub:** Jeder Push auf `master` baut die Mod (`.github/workflows/release.yml`) und legt
+ein Release mit der Jar an – Version `1.0.0-build.<Nummer>`, Tag `v1.0.0-build.<Nummer>`.
+
+**Neue Minecraft-Version:** in `settings.gradle.kts` (`versions(...)`) und
+`stonecutter.properties.toml` eintragen, bauen, Fehler mit `//? if` auflösen, dann den
+Selbsttest (unten) für die neue Version laufen lassen – Mixin-Ziele prüft erst der.
 
 ## Was drin ist
 
@@ -69,7 +84,19 @@ Normale Mobs brauchen nichts – die Mod baut sie aus dem Entity-Typ.
 ## Testen
 
 ```bash
-JAVA_HOME="C:/Program Files/Amazon Corretto/jdk25.0.4_7" ./gradlew runClient
+JAVA_HOME="C:/Program Files/Zulu/zulu-25" ./gradlew :26.2:runClient
 ```
 
-Im Log steht bei jeder Änderung `[TryCity] Morph: …`.
+Im Log steht bei jeder Änderung `[TryCity] Morph: …`. Im Dev-Client lädt die Mod beim Start
+alle Mixin-Ziele (`-Dtrycity.audit=true`) – ein falsches Ziel fällt sofort auf.
+
+**Selbsttest je Version** (Welt, Tryus-Pack, Iris + Complementary aus dem NoRisk-Profil):
+
+```bash
+JAVA_HOME="C:/Program Files/Zulu/zulu-25" ./gradlew :26.3:runClientGameTest -PwithIris
+```
+
+Bilder in `versions/<v>/build/run/clientGameTest/screenshots`: Claim-Wand und Duell-Zone
+ohne/mit Shaderpack, Morph als Zombie in F5, Mob-Hand, Inventar, Geist (das Morph-Paket
+kommt wie vom Server über `trycity:morph`). Mit `-Pbundletest` (vorher `bundleJar`) lädt
+der Test die Mod nur aus der fertigen Datei – prüft, dass Fabric die richtige Version nimmt.

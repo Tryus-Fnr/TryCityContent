@@ -1,0 +1,59 @@
+# Bei jedem Push auf master: Mod für 26.1.2, 26.2 und 26.3 bauen (eine Datei) und als
+# neues Release veröffentlichen. Version = mod.version aus stonecutter.properties.toml
+# plus Build-Nummer, z. B. trycity-content-1.0.0-build.12.jar / Tag v1.0.0-build.12.
+name: Bauen und Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Bauen (26.1.2, 26.2, 26.3 in einer Datei)
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleJar -PbuildNumber=${{ github.run_number }} --stacktrace
+
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          JAR=$(ls build/libs/trycity-content-*.jar)
+          VERSION=$(basename "$JAR" .jar | sed 's/^trycity-content-//')
+          PREV=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+          {
+            echo "Eine Datei für Minecraft 26.1.2, 26.2 und 26.3 (Fabric, nur Client)."
+            echo
+            echo "### Änderungen"
+            if [ -n "$PREV" ]; then
+              git log --pretty='- %s (%h)' "$PREV..HEAD"
+            else
+              git log -1 --pretty='- %s (%h)'
+            fi
+          } > notes.md
+          gh release create "v$VERSION" "$JAR" \
+            --title "TryCity Content $VERSION" \
+            --notes-file notes.md \
+            --target "$GITHUB_SHA" \
+            --latest

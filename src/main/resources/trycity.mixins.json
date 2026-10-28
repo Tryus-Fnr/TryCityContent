@@ -18,6 +18,7 @@
     "PackPostAfterIrisMixin",
     "PlayerMixin",
     "SpellcasterIllagerAccessor",
+    "SwingStateAccessor",
     "WalkAnimationStateAccessor"
   ],
   "injectors": {
