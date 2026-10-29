@@ -141,6 +141,20 @@ public class IrisOutlineTest implements FabricClientGameTest {
             shot(context, "12_morph_trippelt_inventar");
             context.setScreen(() -> null);
 
+            // TrippelT geduckt: eigene Figur über die Schleich-Taste, daneben geduckt stehend und laufend vom Server
+            world.getServer().runCommand("kill @e[type=!player]");
+            try {
+                world.getServer().runCommand("execute at @p run " + RigSummon.command("trippelt", "idle", 0.0, -90f, "~ ~ ~2.2", true));
+                world.getServer().runCommand("execute at @p run " + RigSummon.command("trippelt", "walk", 0.0, -90f, "~ ~ ~-2.2", true));
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException(e);
+            }
+            context.runOnClient(client -> client.options.keyShift.setDown(true));
+            context.waitTicks(20);
+            shot(context, "12b_morph_trippelt_sneak");
+            context.runOnClient(client -> client.options.keyShift.setDown(false));
+            context.waitTicks(10);
+
             // Skibidi genauso: eigene Figur, daneben Stand (singt) und Hüpfer vom Server
             world.getServer().runCommand("kill @e[type=!player]");
             morph(world, "{\"v\":1,\"active\":true,\"entity\":\"minecraft:armor_stand\",\"custom\":\"tryus:skibidi\"}");

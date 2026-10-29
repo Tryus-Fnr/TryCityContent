@@ -100,7 +100,7 @@ final class RigLook implements MorphLook {
         return stand;
     }
 
-    /** Je Client-Tick: weiterlaufen – nach dem eigenen Weg, wie der Server es tut. */
+    /** Je Client-Tick: weiterlaufen – nach dem eigenen Weg und Schleichen, wie der Server es tut. */
     @Override
     public void tick(LocalPlayer player) {
         MorphRig r = rig();
@@ -108,7 +108,7 @@ final class RigLook implements MorphLook {
         boolean walks = !player.isPassenger() && !player.getAbilities().flying && !player.isFallFlying() && !player.isSwimming();
         double dx = player.getX() - player.xo, dz = player.getZ() - player.zo;
         double speed = walks ? Math.sqrt(dx * dx + dz * dz) * 20.0 : 0.0;
-        motion.tick(r, 0.05, speed);
+        motion.tick(r, 0.05, speed, player.isShiftKeyDown());
     }
 
     @Override

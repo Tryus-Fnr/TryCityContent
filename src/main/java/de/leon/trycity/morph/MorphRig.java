@@ -97,8 +97,11 @@ final class MorphRig {
     final Animation idle;
     final Animation walk;
     final Animation attack;
+    /** Schleichen – eine Haltung, die obendrauf kommt ({@link #addOn}); null = keine. */
+    final Animation sneak;
 
-    private MorphRig(float scale, float stride, Bone[] bones, Part[] parts, Animation idle, Animation walk, Animation attack) {
+    private MorphRig(float scale, float stride, Bone[] bones, Part[] parts, Animation idle, Animation walk, Animation attack,
+                     Animation sneak) {
         this.scale = scale;
         this.stride = stride;
         this.bones = bones;
@@ -106,6 +109,7 @@ final class MorphRig {
         this.idle = idle;
         this.walk = walk;
         this.attack = attack;
+        this.sneak = sneak;
     }
 
     /** Lädt ein Rig aus den Ressourcen der Mod, z. B. {@code /assets/trycity/morph/trippelt.json}. */
@@ -142,7 +146,8 @@ final class MorphRig {
         return new MorphRig(json.get("scale").getAsFloat(), stride, bones, parts,
                 animation(anims, "idle", index, bones.length),
                 animation(anims, "walk", index, bones.length),
-                animation(anims, "attack", index, bones.length));
+                animation(anims, "attack", index, bones.length),
+                anims.has("sneak") ? animation(anims, "sneak", index, bones.length) : null);
     }
 
     private static Animation animation(JsonObject anims, String name, Map<String, Integer> index, int boneCount) {
@@ -244,6 +249,26 @@ final class MorphRig {
             base.rot[i].slerp(other.rot[i], w);
             base.pos[i].lerp(other.pos[i], w);
             base.scale[i] += (other.scale[i] - base.scale[i]) * w;
+        }
+    }
+
+    /**
+     * Legt {@code other} mit Gewicht {@code weight} OBENDRAUF – als Abweichung von der Ruhe,
+     * nicht als Ersatz: Drehung dazu, Lage um den Unterschied zur Ruhe verschoben, Größe mal.
+     * So bleibt darunter alles in Bewegung (geduckt weiterlaufen). Nur die Knochen, die
+     * {@code animation} bewegt.
+     */
+    void addOn(Pose base, Pose other, float weight, Animation animation) {
+        if (weight <= 0f) return;
+        float w = Math.min(1f, weight);
+        Quaternionf delta = new Quaternionf();
+        for (int i = 0; i < bones.length; i++) {
+            if (!animation.animates(i)) continue;
+            delta.identity().slerp(other.rot[i], w);
+            base.rot[i].mul(delta);
+            base.pos[i].add((other.pos[i].x - bones[i].offset.x) * w, (other.pos[i].y - bones[i].offset.y) * w,
+                    (other.pos[i].z - bones[i].offset.z) * w);
+            base.scale[i] *= 1f + (other.scale[i] - 1f) * w;
         }
     }
 

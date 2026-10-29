@@ -27,6 +27,12 @@ public final class RigSummon {
      * @param at   Koordinaten im Befehl, z. B. {@code ~ ~ ~2}
      */
     public static String command(String name, String anim, double time, float yaw, String at) throws IOException {
+        return command(name, anim, time, yaw, at, false);
+    }
+
+    /** Wie oben, mit {@code sneak} = geduckt (Sneak-Haltung obendrauf wie beim Schleichen). */
+    public static String command(String name, String anim, double time, float yaw, String at, boolean sneak)
+            throws IOException {
         MorphRig rig = MorphRig.load("/assets/trycity/morph/" + name + ".json");
         MorphRig.Pose pose = rig.newPose();
         MorphRig.Animation animation = switch (anim) {
@@ -35,6 +41,11 @@ public final class RigSummon {
             default -> rig.idle;
         };
         rig.sample(animation, time, pose);
+        if (sneak && rig.sneak != null) {
+            MorphRig.Pose scratch = rig.newPose();
+            rig.sample(rig.sneak, 0, scratch);
+            rig.addOn(pose, scratch, 1f, rig.sneak);
+        }
         MorphRig.Placement[] placements = rig.newPlacements();
         rig.place(pose, placements);
         Quaternionf heading = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
