@@ -51,6 +51,15 @@ Selbsttest (unten) für die neue Version laufen lassen – Mixin-Ziele prüft er
   Fische, Silberfisch & Co. laufen still
 - Hitbox und Augenhöhe wie das Mob – nie enger als der Server erlaubt, sonst würde
   man zurückgesetzt
+- **Mob-Verhalten** (Taste in Steuerung → TryCity, Standard J; nur bei echten Mobs, nicht
+  bei Geist/TrippelT/Skibidi): man bewegt sich wie das Mob – herumlaufen, umschauen,
+  Spieler anschauen, dem Futter in der Hand folgen (Schaf/Weizen), fliehen, jagen. Es läuft
+  der Vanilla-Code eines zweiten, unsichtbaren Exemplars (Goals bzw. Brain, Wegfindung,
+  Lauf-/Blick-/Sprung-Steuerung), daraus werden die eigenen Tasten und der Blick
+  (`MobBehavior`). Was nur der Server kann, bekommt eine Schatten-Welt (`ShadowLevel`, liest
+  die Client-Welt, schreibt nichts) oder fällt einzeln weg. Angriffe holen nur aus. Maus,
+  Bewegungstasten, Klicks oder ein offenes Fenster: man steuert sofort selbst, nach 2 s
+  ohne Eingabe macht das Mob weiter. Der Server merkt nur normale Eingaben.
 
 Der Server (TryusCloudGlobalServer, `MorphManager`) schickt bei jeder Änderung:
 
@@ -98,5 +107,8 @@ JAVA_HOME="C:/Program Files/Zulu/zulu-25" ./gradlew :26.3:runClientGameTest -Pwi
 
 Bilder in `versions/<v>/build/run/clientGameTest/screenshots`: Claim-Wand und Duell-Zone
 ohne/mit Shaderpack, Morph als Zombie in F5, Mob-Hand, Inventar, Geist (das Morph-Paket
-kommt wie vom Server über `trycity:morph`). Mit `-Pbundletest` (vorher `bundleJar`) lädt
+kommt wie vom Server über `trycity:morph`). `MobBehaviorTest` danach: Mob-Verhalten als
+Wolf über die echte Taste (läuft von selbst, Maus unterbricht, nach 2 s wieder), Schaf und
+Ziege folgen einem Mitspieler mit Weizen, viele Mobs nacheinander, Biene hebt mit Flug-Erlaubnis ab, Geist ohne (Bilder 20–23).
+Nur einen Teil: `-Pnur=mob` (nur Mob-Verhalten) bzw. `-Pnur=iris`. Mit `-Pbundletest` (vorher `bundleJar`) lädt
 der Test die Mod nur aus der fertigen Datei – prüft, dass Fabric die richtige Version nimmt.

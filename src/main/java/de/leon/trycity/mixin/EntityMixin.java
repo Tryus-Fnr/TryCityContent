@@ -1,5 +1,6 @@
 package de.leon.trycity.mixin;
 
+import de.leon.trycity.morph.MobBehavior;
 import de.leon.trycity.morph.MorphClient;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.Entity;
@@ -16,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  *       niemand“, und das hört der Client nie selbst (er wartet auf den Server).</li>
  *   <li>Schritt-Takt des Mobs für den eigenen Spieler (Schildkröte trippelt, Wärter stapft).</li>
  * </ul>
+ * Dazu fürs Mob-Verhalten: dreht man sich selbst (Maus), steuert man sofort selbst.
  */
 @Mixin(Entity.class)
 abstract class EntityMixin {
@@ -30,5 +32,10 @@ abstract class EntityMixin {
         float vanilla = cir.getReturnValueF();
         float mob = MorphClient.nextStep((Entity) (Object) this, vanilla);
         if (mob != vanilla) cir.setReturnValue(mob);
+    }
+
+    @Inject(require = 0, method = "turn(DD)V", at = @At("HEAD"))
+    private void trycity$selbstGedreht(double xo, double yo, CallbackInfo ci) {
+        if (xo != 0.0 || yo != 0.0) MobBehavior.turned((Entity) (Object) this);
     }
 }

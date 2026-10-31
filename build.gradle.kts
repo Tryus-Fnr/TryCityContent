@@ -24,10 +24,11 @@ dependencies {
     implementation("net.fabricmc.fabric-api:fabric-api:${sc.properties.get<String>("deps.fabric_api")}")
 
     // Nur zum Testen mit Shaderpack: ./gradlew :26.2:runClientGameTest -PwithIris
-    // (Sodium + Iris von Modrinth, kommen nicht in die Mod).
+    // (Sodium + Iris + Lithium von Modrinth wie im NoRisk-Profil, kommen nicht in die Mod).
     if (project.hasProperty("withIris")) {
         "localRuntime"("maven.modrinth:sodium:${sc.properties.get<String>("deps.sodium")}")
         "localRuntime"("maven.modrinth:iris:${sc.properties.get<String>("deps.iris")}")
+        "localRuntime"("maven.modrinth:lithium:${sc.properties.get<String>("deps.lithium")}")
     }
 }
 
@@ -82,6 +83,10 @@ loom {
         // (./gradlew bundleJar, dann :<v>:runClientGameTest -PwithIris -Pbundletest)
         if (project.hasProperty("bundletest")) {
             vmArgs("-Dfabric.addMods=" + rootProject.file("build/libs").absolutePath)
+        }
+        // Nur ein Teil des Selbsttests: -Pnur=mob (Mob-Verhalten) bzw. -Pnur=iris (Claim-Wand, Shader, Morph-Bilder)
+        if (project.hasProperty("nur")) {
+            vmArgs("-Dtrycity.test=" + project.property("nur"))
         }
     }
 }

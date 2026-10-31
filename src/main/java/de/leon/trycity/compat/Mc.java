@@ -3,6 +3,8 @@ package de.leon.trycity.compat;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.InteractionHand;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -26,5 +28,15 @@ public final class Mc {
         return Minecraft.getInstance().getMainRenderTarget();
         //?} else
         /*return Minecraft.getInstance().gameRenderer.mainRenderTarget();*/
+    }
+
+    /** Mit der Haupthand ausholen wie bei einem Klick ins Leere – auch für den Server. Ab 26.3 mit Schwung-Art und eigenem Paket. */
+    public static void swing(LocalPlayer player) {
+        //? if <26.3 {
+        player.swing(InteractionHand.MAIN_HAND);
+        //?} else {
+        /*player.swing(InteractionHand.MAIN_HAND, player.getMainHandItem().getAttackAnimation(), false);
+        player.connection.send(net.minecraft.network.protocol.game.ServerboundPunchPacket.INSTANCE);
+        *///?}
     }
 }

@@ -37,6 +37,8 @@ public final class MorphModule implements ContentModule {
         TryCityChannel.listen("morph", MorphClient::apply);
         TryCityChannel.listen("morph_event", MorphClient::event);
         ClientTickEvents.END_CLIENT_TICK.register(client -> MorphClient.tick());
+        // Taste fürs Mob-Verhalten (bewegt sich wie das echte Mob) – nur der eigene Client
+        MobBehavior.init();
         // Schlag und Schuss für die Posen – wie der Server sie zählt
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
             if (level.isClientSide() && player == Minecraft.getInstance().player) MorphPoses.melee();

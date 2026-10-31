@@ -104,6 +104,11 @@ public final class MorphClient {
         return state != null;
     }
 
+    /** Als was man gerade verwandelt ist – null ohne Morph. */
+    static @Nullable MorphState state() {
+        return state;
+    }
+
     // ── Die Figur ────────────────────────────────────────────────────────────
 
     /**

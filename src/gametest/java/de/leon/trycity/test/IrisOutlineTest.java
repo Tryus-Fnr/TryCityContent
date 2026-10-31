@@ -35,8 +35,15 @@ import java.util.concurrent.CompletableFuture;
  */
 public class IrisOutlineTest implements FabricClientGameTest {
 
+    /** Läuft dieser Teil des Selbsttests? {@code -Pnur=mob} bzw. {@code -Pnur=iris}, ohne = alles. */
+    static boolean dran(String teil) {
+        String nur = System.getProperty("trycity.test");
+        return nur == null || nur.isBlank() || nur.equals(teil);
+    }
+
     @Override
     public void runTest(ClientGameTestContext context) {
+        if (!dran("iris")) return;
         context.runOnClient(client -> {
             PackRepository packs = client.getResourcePackRepository();
             packs.reload();
@@ -178,7 +185,7 @@ public class IrisOutlineTest implements FabricClientGameTest {
     }
 
     /** HUD/Hand aus (F1) – ab 26.2 hängt das am Hud und lässt sich nur umschalten. */
-    private static void hideGui(Minecraft client, boolean hide) {
+    static void hideGui(Minecraft client, boolean hide) {
         //? if <26.2 {
         client.options.hideGui = hide;
         //?} else
@@ -186,7 +193,7 @@ public class IrisOutlineTest implements FabricClientGameTest {
     }
 
     /** Wie der Server ({@code TryCityModChannel.send}): JSON im Kanal trycity:morph an den Spieler. */
-    private static void morph(TestSingleplayerContext world, String json) {
+    static void morph(TestSingleplayerContext world, String json) {
         send(world, "morph", json);
     }
 
@@ -216,7 +223,7 @@ public class IrisOutlineTest implements FabricClientGameTest {
      * Testsystems zeichnet selbst ein Bild und bringt Sodium zum Absturz ("Global
      * terrain uniforms have not been updated").
      */
-    private static void shot(ClientGameTestContext context, String name) {
+    static void shot(ClientGameTestContext context, String name) {
         context.runOnClient(client -> Screenshot.grab(client.gameDirectory, name + ".png",
                 Mc.mainTarget(), 1, message -> {}));
         context.waitTicks(10);
