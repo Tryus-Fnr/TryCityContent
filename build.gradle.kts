@@ -25,7 +25,8 @@ dependencies {
 
     // Nur zum Testen mit Shaderpack: ./gradlew :26.2:runClientGameTest -PwithIris
     // (Sodium + Iris + Lithium von Modrinth wie im NoRisk-Profil, kommen nicht in die Mod).
-    if (project.hasProperty("withIris")) {
+    // -PohneSodium: Selbsttest im reinen Vanilla-Client (z. B. -Pnur=kamera, Vanilla-Culling).
+    if (project.hasProperty("withIris") && !project.hasProperty("ohneSodium")) {
         "localRuntime"("maven.modrinth:sodium:${sc.properties.get<String>("deps.sodium")}")
         "localRuntime"("maven.modrinth:iris:${sc.properties.get<String>("deps.iris")}")
         "localRuntime"("maven.modrinth:lithium:${sc.properties.get<String>("deps.lithium")}")

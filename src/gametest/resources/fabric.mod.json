@@ -7,7 +7,9 @@
 	"entrypoints": {
 		"fabric-client-gametest": [
 			"de.leon.trycity.test.IrisOutlineTest",
-			"de.leon.trycity.test.MobBehaviorTest"
+			"de.leon.trycity.test.MobBehaviorTest",
+			"de.leon.trycity.test.CameraGuardTest",
+			"de.leon.trycity.test.CameraLoadTest"
 		]
 	},
 	"depends": {
